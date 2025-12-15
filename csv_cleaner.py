@@ -1,50 +1,84 @@
 import pandas as pd
-from tkinter import Tk, filedialog
-from openpyxl.styles import Font, PatternFill  # sub modulo onde vivem as classes para formata o texto (negrito, etc)
-                                  # Styles e o modulo que contem Font,Alignment,PatternFill
-
-def escolher_csv():
-    janela = Tk()  # cria a janela do Tkinter
-    janela.withdraw()  # Esconde a janela principal do Tkinter
-    # Pedir ao utilizador que ficheiro quer abrir
-    path = filedialog.askopenfilename(
-        title="Escolher um ficheiro CSV",
-        defaultextension=".csv",  # se o utilizador não escrever a extensão o programa acrescenta automaticamente
-        filetypes=[("csv", "*.csv")]  # mostra apenas os ficheiros .csv
-    )
-    if not path:
-        return None
-
-    return path
+from datetime import datetime
+from openpyxl.styles import Font, PatternFill, numbers, Alignment, Side, Border  # submodulo onde vivem as classes para formata o texto (negrito, etc), Styles e o modulo que contem Font,Alignment,PatternFill,numbers
+from openpyxl.worksheet.table import Table, TableStyleInfo
+import streamlit as st
 
 
-def ler_csv(path):  # Lemos o csv
+def registar_erro(mensagem):
+    # Esta função regista erros num ficheiro chamado "log.txt".
+    # Permite guardar um histórico de erros que acontecem durante o programa.
+    # Isto permite diagnosticar problemas, ajudar utilizadores
+
+    formato = "%d-%m-%Y %H:%M:%S"
+    data_hora_actual = datetime.now().strftime(formato)  # a que data e hora o erro ocorreu
+
+    # Abrimos o ficheiro "log.txt" em modo "append" (a).
+    # Isto significa que cada novo erro será acrescentado no fim do ficheiro, sem apagar o que já está escrito
+    with open("log.txt", "a", encoding="utf8") as file:
+        file.write(f"{data_hora_actual} - {mensagem}\n")
+
+
+# Esta função permite mostrar mensagens de erro ao utilizador de forma clara
+# e, simultaneamente, registar o erro no ficheiro log.txt.
+# Assim evitamos repetir vários prints e chamadas ao registar_erro() em cada validação.
+# Sempre que houver um erro no CSV, chamamos erro_usuario(mensagem, sugestao)
+# para manter o código limpo, organizado e profissional.
+def erro_usuario(mensagem, sugestao):
+    st.error(f"Erro: {mensagem}")
+    st.error(f"→ {sugestao}")
+    registar_erro(mensagem)
+
+
+def ler_csv(uploaded_file):  # Lemos o csv
     # se o utilizador nao escolheu o ficheiro cancela a funcao e nao tenta ler nada
-    if path is None:
+    if uploaded_file is None:
         return None
     # verificamos se o utilizador escolheu o ficheiro com a extensao .csv
-    if not path.lower().endswith(".csv"):
-        print("Erro: ficheiro selecionado não é um CSV.")
+    if not uploaded_file.name.lower().endswith(".csv"):
+        erro_usuario(
+            "Ficheiro selecionado não é um CSV.",
+            "O ficheiro tem de conter a extensão CSV(exemplo: xxxx.csv)."
+        )
+        return None
+    try:
+        df = pd.read_csv(uploaded_file, encoding="latin1", sep=None, engine="python")
+    except Exception as e:
+        erro_usuario(
+            "Erro ao ler o ficheiro CSV.",
+            f"O ficheiro pode estar corrompido ou com formato inválido. Detalhes: {e}"
+        )
         return None
 
-    df = pd.read_csv(path, encoding="latin1")
-
     if df.empty:  # se o DataFrame estiver vazio(csv vazio) devolve None para o programa nao crashar
+        erro_usuario(
+            "O CSV está vazio.",
+            "Certifique-se que o CSV contem pelo menos uma linha de dados."
+        )
         return None
 
     if df.columns.size == 0:  # se o CSV nao conter colunas devolve None para o programa nao chashar
-        print("Erro: o CSV não contém colunas.")
+        erro_usuario(
+            "O CSV não contém colunas.",
+            "Certifique-se que o ficheiro tem cabeçalhos(ex:data,produto,quantidade,preco)."
+        )
         return None
 
     if df.shape[1] == 1:  # df shape[1] representa o número de colunas do CSV // Podiamos usar df.columns == 1, mas nao compensa
-        print("Erro: o CSV só contem uma coluna.")
+        erro_usuario(
+            "O CSV só contém uma coluna.",
+            "Verifique se o ficheiro está separado corretamente por vírgulas e não por outro separador."
+        )
         return None
 
     # Verificamos se o csv tem as acolunas certas e obrigatorias
     colunas_obrigatorias = ["data", "produto", "quantidade", "preco"]
     for i in colunas_obrigatorias:
         if i not in df.columns:
-            print(f"Erro: o csv nao contem a coluna obrigatoria: {i}")
+            erro_usuario(
+                f"O CSV não contém a coluna obrigatória: {i}.",
+                "O ficheiro deve conter as colunas: data, produto, quantidade, preco."
+            )
             return None
 
     # Converte a coluna "data" para o tipo datetime.
@@ -55,54 +89,84 @@ def ler_csv(path):  # Lemos o csv
     # 'isna()' marca cada linha como True se for inválida (NaT, vazia, erro na conversão).
     # 'any()' devolve True se existir pelo menos uma linha inválida.
     if df["data"].isna().any():
-        print("Erro: existem datas invalidas no CSV")
+        erro_usuario(
+            "Existem datas inválidas no CSV",
+            "Certifique-se que as datas estão no formato válido(DD-MM-AAAA ou YYYY-MM-DD)"
+        )
         return None
 
     # validamos se os valores sao ...
     if df["produto"].isna().any():
-        print("Erro: existem valores invalidos na coluna produto do CSV")
+        erro_usuario(
+            "Existem valores inválidos na coluna produto do CSV",
+            "Certifique-se que o campo 'produto' não contem valores numéricos"
+        )
         return None
-    # str.strip() remove espacos antes e depois // =="" deteta ‘strings’ vazia // any() verifica se pelo menos um e vazio
+    # str.strip() remove espacos antes e depois // == "" deteta ‘strings’ vazia // any() verifica se pelo menos um e vazio
     if (df["produto"].str.strip() == "").any():
-        print("Erro: existem colunas vazias na coluna produto do CSV")
+        erro_usuario(
+            "Existem produtos vazios na coluna 'produto'.",
+            "Preencha todos os nomes de produtos e remova linhas onde o produto esteja vazio"
+        )
         return None
     # Verifica se algum produto é composto APENAS por dígitos.
     # isdigit() → True se a string for só números
     # any() → True se pelo menos um valor for só números
     # Produtos só com números normalmente indicam erro no CSV.
     if df["produto"].str.isdigit().any():
-        print("Erro: existem produtos compostos apenas por numeros na coluna produto do CSV")
+        erro_usuario(
+            "Existem produtos compostos apenas por numeros na 'coluna' produto do CSV",
+            "Os nomes dos produtos devem conter texto. Substitua códigos numéricos por nomes reais."
+        )
         return None
     # Verifica se algum produto contém caracteres proibidos (@, #, $, %, ?, !, /, ~)
     # str.contains() procura no texto usando regex; o padrão [@#$%?!/~] significa "qualquer caractere destes"
     # r"" → diz ao Python que é um raw ‘string’, necessário para regex(regular expressions). Regex é uma mini-linguagem para procurar padrões dentro de texto.
     if df["produto"].str.contains(r"[@#$%?!/~]").any():
-        print("Erro: existem caracteres invalidos(@, #, $, %, ?, !, /, ~) na coluna produto do CSV")
+        erro_usuario(
+            "Existem caracteres inválidos(@, #, $, %, ?, !, /, ~) na coluna 'produto'.",
+            "Remova estes caracteres especiais dos nomes dos produtos para garantir um formato válido."
+        )
         return None
 
     # validamos se os valores sao numericos
     df["quantidade"] = pd.to_numeric(df["quantidade"], errors="coerce")  # to_numeric converte tudo para numero
     if df["quantidade"].isna().any():
-        print("Erro: existem valores invalidos na coluna quantidade do CSV")
+        erro_usuario(
+            "Existem valores não numéricos na coluna 'quantidade'.",
+            "Certifique-se de que todos os valores desta coluna são números inteiros (ex.: 1, 2, 3)."
+        )
         return None
 
     df["preco"] = pd.to_numeric(df["preco"], errors="coerce")
     if df["preco"].isna().any():
-        print("Erro: existem valores invalidos na coluna preço do CSV")
+        erro_usuario(
+            "Existem valores não numéricos na coluna 'preco'.",
+            "Certifique-se de que todos os valores desta coluna são números válidos, usando ponto como separador decimal (ex.: 2.50)"
+        )
         return None
 
     # validamos se os valores nao sao negativos
     if (df["quantidade"] <= 0).any():
-        print("Erro: não podem existir valores negativos na coluna quantidade do CSV")
+        erro_usuario(
+            "Existem valores negativos ou zero na coluna 'quantidade'.",
+            "A quantidade deve ser sempre um número inteiro maior que zero (ex.: 1, 2, 3)."
+        )
         return None
 
     if (df["preco"] <= 0).any():
-        print("Erro: não podem existir valores negativos na coluna preço do CSV")
+        erro_usuario(
+            "Existem valores negativos ou zero na coluna 'preco'.",
+            "O preço deve ser um número maior que zero. Pode incluir casas decimais (ex.: 2.50)."
+        )
         return None
 
     # validamos se os valores sao inteiros e nao floats
     if (df["quantidade"] % 1 != 0).any():  # % 1 != 0 significa se tem numeros decimais/any verifica se existe ao menos um valor decimal
-        print("Erro: não podem existir valores decimais na coluna quantidade do CSV")
+        erro_usuario(
+            "Não podem existir valores decimais na coluna 'quantidade'.",
+            "A quantidade deve ser um número inteiro (ex.: 1, 2, 3). Remova valores como 1.5 ou 2,7."
+        )
         return None
 
     print(df.head())
@@ -218,8 +282,7 @@ def gerar_relatorio(df):
 
     nomes_colunas = list(df.columns)
 
-    nomes_colunas_formatado = " | ".join(df.columns
-                                         )
+    nomes_colunas_formatado = " | ".join(df.columns)
     # Criamos um dicionário com todos os resultados para enviar para o Excel depois
     relatorio = {
         "linhas": linhas,
@@ -245,24 +308,182 @@ def gerar_relatorio(df):
 
 
 def exportar_excel(df_limpo, relatorio):
+    relatorio = {k: str(v) for k, v in relatorio.items()}  # k=key(por exemplo, top_3_produtos, v=value(por exemplo, arroz, massa etc)//items() percorre tudo no dicionario chave/valor
     # Transformamos o relatorio em um DataFrame
-    df_relatorio = pd.DataFrame.from_dict(relatorio, orient="index")  #
+    # Criamos o DataFrame do relatório com duas colunas fixas:
+    #   Metrica | Valor
+    # Este formato é 100% compatível com Tabelas Oficiais do Excel,
+    # porque garante:
+    #   - cabeçalhos válidos (‘strings’, sem caracteres especiais)
+    #   - estrutura tabular real de 2 colunas
+    #   - ausência de listas ou objetos não suportados
+    # Por isso NÃO é necessário aplicar limpeza aos nomes das colunas.
+    df_relatorio = pd.DataFrame(list(relatorio.items()), columns=["Metrica", "Valor"])
+
+
 
     with pd.ExcelWriter("relatorio.xlsx", engine="openpyxl") as writer:
         df_limpo.to_excel(writer, sheet_name="Dados_limpos", index=False)  # index=False elimina a coluna com o nome index que iria aparecer no excel
-        df_relatorio.to_excel(writer, sheet_name="Relatorio")
+        df_relatorio.to_excel(writer, sheet_name="Relatorio", index=False)
         ws_dados = writer.book["Dados_limpos"]
         ws_relatorio = writer.book["Relatorio"]
 
-        # Cabecalhos a negrito na folha de dados limpos
+        # Congelar a primeira linha de ambas as folhas (mantem o cabeçalho) - se o cliente fazer ‘scroll’ a linha do cabecalho fica sempre à vista
+        ws_dados.freeze_panes = "A2"  # A2 significa que tudo a cima e á esquerda desta celula fica congelado
+        ws_relatorio.freeze_panes = "A2"
+
+        #  AUTOAJUSTE DA LARGURA DAS COLUNAS
+        #  Percorremos todas as colunas da folha e determinamos o tamanho
+        #  máximo do conteúdo de cada coluna (incluindo o cabeçalho). Depois
+        #  aplicamos uma largura proporcional no Excel. Isto evita textos
+        #  cortados, valores escondidos e melhora muito a legibilidade.
+        #  Este método torna o ficheiro final profissional e evita que o
+        #  utilizador tenha de ajustar colunas manualmente.
+        #  Autoajuste das colunas em dados_limpos
+        for coluna in ws_dados.columns:  # ws_dados.columns devolve todas as colunas
+            letra = coluna[0].column_letter  # coluna[0] primeira celula dessa coluna // column_letter devolve A, B, C, etc
+            ws_dados.column_dimensions[letra].width = 20
+        #  Autoajuste das colunas em relatorio
+        for coluna in ws_relatorio.columns:
+            letra = coluna[0].column_letter
+            ws_relatorio.column_dimensions[letra].width = 25
+
+        # -------------------- Bordas Finas -----------------------------------
+        # Criamos um estilo de borda
+        bordas_finas = Border(
+            left=Side(style="thin"),  # borda esquerda fina
+            right=Side(style="thin"),
+            top=Side(style="thin"),
+            bottom=Side(style="thin")
+        )
+        # ------------------- Aplicar bordas finas na folha 'Dados_limpos' ---------------------
+        for linha in ws_dados.iter_rows(
+            min_row=1,  # comecamos na linha 1 que inclui o cabecalho
+            max_row=ws_dados.max_row,  # ultima linha que contem dados
+            min_col=1,  # comecamos na primeira coluna (A)
+            max_col=ws_dados.max_column  # ultima coluna que contem dados
+        ):
+            #  percorremos cada celula dentro da linha
+            for cell in linha:
+                cell.border = bordas_finas
+
+        # ------------------- Aplicar bordas finas na folha 'Relatorio' --------------------
+        for linha in ws_relatorio.iter_rows(
+            min_row=1,
+            max_row=ws_relatorio.max_row,
+            min_col=1,
+            max_col=ws_relatorio.max_column
+        ):
+            for cell in linha:
+                cell.border = bordas_finas
+
+        # ----------------Criar tabela oficial na folha 'Dados_limpos'--------------------------
+        # CRIAÇÃO DE TABELAS OFICIAIS DO EXCEL (Structured Tables)
+        #
+        # Transformamos o intervalo de dados de cada folha numa "Tabela Oficial"
+        # do Excel. Diferente de simples células, estas tabelas têm funções
+        # avançadas e tornam o relatório muito mais profissional.
+        #
+        # VANTAGENS PRINCIPAIS:
+        #   - Filtros automáticos no cabeçalho (ordenar, filtrar, pesquisar)
+        #   - Formatação profissional com linhas alternadas e cabeçalho destacado
+        #   - A tabela expande automaticamente se o cliente adicionar novas linhas
+        #   - Fórmulas ficam estruturadas (ex.: [@quantidade] * [@preco])
+        #   - Melhor compatibilidade com Power BI, Power Query e automações
+        #   - Visual muito mais limpo e apresentável para clientes
+        # NOTA:
+        #   O nome da tabela (displayName) não pode ter espaços ou acentos.
+        #   O intervalo (ref) precisa de ser válido e conter cabeçalhos em texto.
+        # Em resumo:
+        # Criar Tabelas Oficiais torna o Excel inteligente, dinâmico e pronto para
+        # uso empresarial — um grande diferencial para um produto de freelancing.
+        # range completo da tabela, por exemplo: "A1:D150"
+        tabela_range_dados = ws_dados.dimensions  # calcula automaticamente o tamanho da tabela
+
+        # criamos a tabela com um nome unico
+        tabela_dados = Table(displayName="Tabela_Dados_limpos", ref=tabela_range_dados)
+
+        # estilo da tabela(cores alternadas + cabecalho especial)
+        estilo = TableStyleInfo(
+            name="TableStyleMedium9",
+            showFirstColumn=False,
+            showLastColumn=False,
+            showRowStripes=True,
+            showColumnStripes=True
+        )
+        tabela_dados.tableStyleInfo = estilo
+        ws_dados.add_table(tabela_dados)
+
+        # ----------------Criar tabela oficial na folha 'Relatorio'--------------------------
+        tabela_range_relatorio = ws_relatorio.dimensions
+
+        tabela_relatorio = Table(displayName="Tabela_Relatorio", ref=tabela_range_relatorio)
+        tabela_relatorio.tableStyleInfo = estilo
+        ws_relatorio.add_table(tabela_relatorio)
+
+
+        # Cabecalhos a Negrito na folha de dados limpos
         for i in ws_dados[1]:  # devolve a primeira linha que e o cabecalho
             i.font = Font(bold=True)
 
-        # Cabecalhos a negrito na folha de relatorio
+        # Cabecalhos a Negrito na folha de relatorio
         for i in ws_relatorio[1]:
             i.font = Font(bold=True)
 
+        # ------------------- Formatacao dinamica de colunas importantes----------------------------------------
+        # Quando exportamos um DataFrame para Excel usando pandas,
+        # a estrutura fica SEMPRE da seguinte forma:
+        #
+        #   Linha 1 → Cabeçalho (nomes das colunas)
+        #   Linha 2 → Primeira linha de dados reais
+        #   Linha 3 → Segunda linha de dados reais
+        #   ...
+        #
+        # Por isso, ao aplicar formatações numéricas (moeda, datas,
+        # percentagens, etc.) NUNCA devemos incluir a linha 1,
+        # porque ela contém texto ("data", "produto", "preco", etc.).
+        #
+        # Se formatássemos o cabeçalho como moeda ou número,
+        # o Excel iria substituir o texto por valores como €0,00.
+        # Isso destruiria os nomes das colunas.
+        #
+        # Assim, usamos SEMPRE:
+        #   min_row = 2 → começa a formatação na linha 2 (dados)
+        #
+        # Também usamos col_x = df.columns.get_loc("nome") + 1
+        # para descobrir dinamicamente em que coluna está cada campo,
+        # mesmo que a ordem das colunas mude no ficheiro do cliente.
+        #
+        # Isto torna o programa 100% DINÂMICO e compatível com
+        # qualquer CSV que siga as regras de validação.
+
+        # Descobrir dinamicamente em que coluna do Excel está cada campo importante
+        coluna_data = df_limpo.columns.get_loc("data") + 1  # perguntamos ao pandas em que posicao esta a coluna 'data' com get_loc
+        coluna_produto = df_limpo.columns.get_loc("produto") + 1
+        coluna_quantidade = df_limpo.columns.get_loc("quantidade") + 1
+        coluna_preco = df_limpo.columns.get_loc("preco") + 1
+
+        for row in ws_dados.iter_rows(min_row=2, min_col=coluna_preco, max_col=coluna_preco):  # iter_rows itera as linhas e celulas dessa folha
+            for cell in row:
+                cell.number_format = "€#,##0.00"  # por exemplo: 10 → €10,00
+
+        for row in ws_dados.iter_rows(min_row=2, min_col=coluna_data, max_col=coluna_data):
+            for cell in row:
+                cell.number_format = "DD-MM-YYYY"
+
+        for row in ws_dados.iter_rows(min_row=2, min_col=coluna_quantidade, max_col=coluna_quantidade):
+            for cell in row:
+                cell.number_format = "0"  # indica ao Excel que os valores devem ser apresentados como números inteiros, sem casas decimais.
+
+        for row in ws_dados.iter_rows(min_row=2, min_col=coluna_produto, max_col=coluna_produto):
+            for cell in row:
+                cell.alignment = Alignment(horizontal="left")  # A coluna "produto" contém texto, não números.
+                                                               # Por isso NÃO aplicamos number_format aqui — caso contrário o Excel
+                                                               # iria tentar converter texto em número, destruindo os nomes
+
+
         # ---------------ajustar a largura das colunas na folha "Dados_limpos"-------------------------------------
+
         for coluna in ws_dados.columns:  # itera sobre cada coluna
             nome_coluna = coluna[0].value  # por exemplo quantidade, preco, produto
 
@@ -298,29 +519,26 @@ def exportar_excel(df_limpo, relatorio):
             cell.font = letra_branca
 
 
-
-
-
-def main():
-    caminho = escolher_csv()
+#def main():
+    #caminho = escolher_csv()
     # se o utilizador cancelar a escolha na janela,a def escolher_csv() devolve None e termina o programa sem crashar
-    if caminho is None:
-        return "Nenhum ficheiro foi selecionado"
+    #if caminho is None:
+        #return "Nenhum ficheiro foi selecionado"
     # le o ficheiro csv escolhido e transforma-o num DataFrame do pandas
-    df = ler_csv(caminho)
-    if df is None:
-        return "Erro: ficheiro selecionado não é um CSV.Certifique-se de que escolheu um ficheiro válido."
+    #df = ler_csv(caminho)
+    #if df is None:
+        #return "Erro: ficheiro selecionado não é um CSV.Certifique-se de que escolheu um ficheiro válido."
     # limpa os dados: remove linhas vazia, repetidas, etc
-    df_limpo = limpar_dados(df)
+    #df_limpo = limpar_dados(df)
     # gera um relatorio com informacoes do DataFrame(numero de linhas, colunas e nomes das colunas)
-    relatorio = gerar_relatorio(df_limpo)
+    #relatorio = gerar_relatorio(df_limpo)
     # exportamos os dados limpos + relatorio para um unico ficheiro excel com duas folhas
-    exportar_excel(df_limpo, relatorio)
-    print("Relatório criado com sucesso!")
+    #exportar_excel(df_limpo, relatorio)
+    #print("Relatório criado com sucesso!")
 
 
 # Este bloco so e executado se este ficheiro for executado diretamente. Serve como ponto de entrada principal do programa
-if __name__ == "__main__":
+#if __name__ == "__main__":
     # Chama a funcao main() para iniciar o processo(gatilho para arrancar o programa)
-    main()
+    #main()
 

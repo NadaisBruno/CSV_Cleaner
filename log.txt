@@ -1,0 +1,21 @@
+11-12-2025 14:07:02 - O CSV não contém a coluna obrigatória: preco.
+11-12-2025 14:07:23 - O CSV não contém a coluna obrigatória: preco.
+11-12-2025 14:22:05 - O CSV só contém uma coluna.
+11-12-2025 14:27:14 - O CSV só contém uma coluna.
+11-12-2025 14:29:42 - O CSV só contém uma coluna.
+11-12-2025 19:53:23 - Existem datas inválidas no CSV
+11-12-2025 20:18:18 - Existem datas inválidas no CSV
+11-12-2025 20:27:09 - Existem datas inválidas no CSV
+11-12-2025 20:35:49 - Existem datas inválidas no CSV
+11-12-2025 20:37:22 - Existem datas inválidas no CSV
+11-12-2025 20:51:39 - Existem datas inválidas no CSV
+11-12-2025 20:52:56 - Existem datas inválidas no CSV
+11-12-2025 20:53:13 - O CSV não contém a coluna obrigatória: data.
+11-12-2025 20:55:56 - Existem datas inválidas no CSV
+11-12-2025 21:04:39 - Existem datas inválidas no CSV
+11/12/2025 21:11:12 - Existem datas inválidas no CSV
+11/12/2025 21:11:19 - Existem datas inválidas no CSV
+11/12/2025 21:12:58 - Existem datas inválidas no CSV
+12-12-2025 10:57:24 - Erro ao ler o ficheiro CSV.
+12-12-2025 14:28:43 - Erro ao ler o ficheiro CSV.
+14-12-2025 17:52:35 - Existem datas inválidas no CSV
