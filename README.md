@@ -1,17 +1,16 @@
 ﻿# CSV Cleaner and Report Generator
 
-Aplicaçao desenvolvida em Python para validar, limpar e gerar relatorios a partir de ficheiros CSV com uma ‘interface’
-web simples criada com Streamlit
-O objetivo deste projeto e automatizar tarefas repetitivas de limpeza de dados
+Aplicaçao desenvolvida em Python para validar, limpar e gerar relatorios a partir de ficheiros CSV com uma ‘interface’ web simples criada com Streamlit.
+Este projeto tem como objetivo automatizar tarefas repetitivas de limpeza de dados.
 
 ## Funcionalidades
 
  - Upload de ficheiros CSV atraves do navegador(Streamlit)
- - Validacao automatica da estrutura do CSV(colunas obrigatorias)
- - Identificação de erros nos dados (datas no formato invalido, valores não numericos, carateres invalidos, valores negativos, etc)
+ - Validação automática da estrutura do CSV(colunas obrigatórias)
+ - Identificação de erros nos dados (datas no formato inválido, valores não numéricos, carateres inválidos, valores negativos, etc)
  - Limpeza de dados com a remoção de duplicados, remoção de espaços em todas as colunas, ordenação de datas
  - Visualização de dados brutos e dos dados limpos
- - Geração de relatorio com metricas importantes(médias, produto mais vendido, produto mais caro, top 3 produtos mais vendidos, etc)
+ - Geração de relatório com metricas importantes(médias, produto mais vendido, produto mais caro, top 3 produtos mais vendidos, etc)
  - Exportação automatica de um ficheiro Excel formatado
 
 ## Como usar
@@ -33,3 +32,4 @@ O ficheiro deve conter as seguintes colunas obrigatórias:
     - OpenPyXL
     - Pandas
     - Streamlit
+
