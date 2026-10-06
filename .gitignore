@@ -1,0 +1,20 @@
+# created by virtualenv automatically
+# cada utilizador cria o seu proprio ambiente virtual - nao deve ir para o GitHub
+.venv/
+.venv1/
+venv/
+env/
+
+# ficheiros temporarios do python que nao interessam no github
+__pycache__/
+*.pyc
+
+#
+log.txt
+relatorio.xlsx
+
+# IDEs / Editores
+.idea/
+.vscode/
+
+

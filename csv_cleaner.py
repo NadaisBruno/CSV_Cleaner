@@ -1,6 +1,6 @@
 import pandas as pd
 from datetime import datetime
-from openpyxl.styles import Font, PatternFill, numbers, Alignment, Side, Border  # submodulo onde vivem as classes para formata o texto (negrito, etc), Styles e o modulo que contem Font,Alignment,PatternFill,numbers
+from openpyxl.styles import Font, PatternFill, Alignment, Side, Border  # submodulo onde vivem as classes para formata o texto (negrito, etc), Styles e o modulo que contem Font,Alignment,PatternFill,numbers
 from openpyxl.worksheet.table import Table, TableStyleInfo
 import streamlit as st
 
@@ -91,7 +91,7 @@ def ler_csv(uploaded_file):  # Lemos o csv
     if df["data"].isna().any():
         erro_usuario(
             "Existem datas inválidas no CSV",
-            "Certifique-se que as datas estão no formato válido(DD-MM-AAAA ou YYYY-MM-DD)"
+            "Certifique-se que as datas estão no formato válido(DD-MM-AAAA ou AAAA-MM-DD)"
         )
         return None
 
@@ -102,7 +102,7 @@ def ler_csv(uploaded_file):  # Lemos o csv
             "Certifique-se que o campo 'produto' não contem valores numéricos"
         )
         return None
-    # str.strip() remove espacos antes e depois // == "" deteta ‘strings’ vazia // any() verifica se pelo menos um e vazio
+    # str.strip() remove espacos antes e depois // == "" deteta ‘strings’ vazias // any() verifica se pelo menos um e vazio
     if (df["produto"].str.strip() == "").any():
         erro_usuario(
             "Existem produtos vazios na coluna 'produto'.",
@@ -308,7 +308,7 @@ def gerar_relatorio(df):
 
 
 def exportar_excel(df_limpo, relatorio):
-    relatorio = {k: str(v) for k, v in relatorio.items()}  # k=key(por exemplo, top_3_produtos, v=value(por exemplo, arroz, massa etc)//items() percorre tudo no dicionario chave/valor
+    relatorio = {k: str(v) for k, v in relatorio.items()}  # k=key(por exemplo, top_3_produtos), v=value(por exemplo, arroz, massa etc)//items() percorre tudo no dicionario chave/valor
     # Transformamos o relatorio em um DataFrame
     # Criamos o DataFrame do relatório com duas colunas fixas:
     #   Metrica | Valor
@@ -519,26 +519,5 @@ def exportar_excel(df_limpo, relatorio):
             cell.font = letra_branca
 
 
-#def main():
-    #caminho = escolher_csv()
-    # se o utilizador cancelar a escolha na janela,a def escolher_csv() devolve None e termina o programa sem crashar
-    #if caminho is None:
-        #return "Nenhum ficheiro foi selecionado"
-    # le o ficheiro csv escolhido e transforma-o num DataFrame do pandas
-    #df = ler_csv(caminho)
-    #if df is None:
-        #return "Erro: ficheiro selecionado não é um CSV.Certifique-se de que escolheu um ficheiro válido."
-    # limpa os dados: remove linhas vazia, repetidas, etc
-    #df_limpo = limpar_dados(df)
-    # gera um relatorio com informacoes do DataFrame(numero de linhas, colunas e nomes das colunas)
-    #relatorio = gerar_relatorio(df_limpo)
-    # exportamos os dados limpos + relatorio para um unico ficheiro excel com duas folhas
-    #exportar_excel(df_limpo, relatorio)
-    #print("Relatório criado com sucesso!")
 
-
-# Este bloco so e executado se este ficheiro for executado diretamente. Serve como ponto de entrada principal do programa
-#if __name__ == "__main__":
-    # Chama a funcao main() para iniciar o processo(gatilho para arrancar o programa)
-    #main()
 
